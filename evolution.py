@@ -1,7 +1,6 @@
 
-from copy import copy, deepcopy
+from copy import deepcopy
 import random
-import numpy
 
 from chromosome import Chromosome
 
@@ -9,18 +8,33 @@ class Evolution:
 
     # @TODO fix conflicts
     def crossover(self, chromosome1, chromosome2):
-        new_chromosome = []
-        chromosome1_chunks = numpy.array_split(numpy.array(chromosome1.genes),3)
-        chromosome2_chunks = numpy.array_split(numpy.array(chromosome2.genes),3)
-        first_section = chromosome1_chunks[0]
-        second_section = chromosome2_chunks[1]
-        third_section = chromosome1_chunks[2]
-        new_chromosome.append(first_section)
-        new_chromosome.append(second_section)
-        new_chromosome.append(third_section)
-        return Chromosome(self.flatten(new_chromosome))
+        section = random.sample(chromosome1.genes, random.randrange(2, len(chromosome1.genes) - 2))
+        section_genes_ids = list(map(lambda x: x.id, section))
+        new_genes = section
+        missing_genes = []
+        for gene in chromosome1.genes:
+            if gene.id not in section_genes_ids:
+                missing_genes.append(gene.id)
+        for id in missing_genes:
+            chromosome2_gene = chromosome2.find_task_by_id(id)
+            valid_gene = True
+            for gene in new_genes:
+                if chromosome2_gene.id == gene.id and chromosome2_gene.week == gene.week and chromosome2_gene.schedule == gene.schedule:
+                    valid_gene = False
+                    break
+            if valid_gene:
+                new_genes.append(chromosome2_gene)
+            else:
+                chromosome1_gene = chromosome1.find_task_by_id(id)
+                new_genes.append(chromosome1_gene)
+        new_genes = sorted(new_genes, key=lambda x: x.id)
+        has_conflicts = self.check_conflicts(new_genes)
+        if has_conflicts:
+            print("Conflicts")
+        else:
+            print("No Conflicts")
+        return Chromosome(new_genes)
             
-
     def mutation(self, chromosome):
         temp_chromosome = deepcopy(chromosome)
         chosen_gene = temp_chromosome.genes.pop(random.randrange(len(temp_chromosome.genes)))
@@ -34,7 +48,7 @@ class Evolution:
                 gene.schedule = chosen_gene.schedule
      
     # Seleção por torneio
-    def selection(self, population, n, tsize=5):
+    def selection(self, population, tsize=3):
         candidates = random.sample(population, tsize)
         return max(candidates, key=lambda x: x.fitness)
 
@@ -58,12 +72,8 @@ class Evolution:
                 weeks_schedule.append(week_day)
         return fitness + len(weeks_schedule)
 
-    def chunks(self, lst, n):
-        result = []
-        for i in range(0, len(lst), n):
-            result.append(lst[i:i + n])
-        return result
-
-    def flatten(self, t):
-        return [item for sublist in t for item in sublist]
+    def check_conflicts(self, genes):
+        conflictable_info = list(map(lambda x: str(x.week) + str(x.schedule), genes))
+        return len(conflictable_info) != len(set(conflictable_info))
+        
   
