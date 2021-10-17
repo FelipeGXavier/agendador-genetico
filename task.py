@@ -1,5 +1,3 @@
-import random
-
 class Task:
 
     def __init__(self, id, preference = 0):

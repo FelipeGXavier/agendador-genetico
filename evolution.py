@@ -6,15 +6,17 @@ from chromosome import Chromosome
 
 class Evolution:
 
-    # @TODO fix conflicts
     def crossover(self, chromosome1, chromosome2):
+        # Seleciona uma seção aleatória de um dos cromossomos para iniciar a recombinação
         section = random.sample(chromosome1.genes, random.randrange(2, len(chromosome1.genes) - 2))
         section_genes_ids = list(map(lambda x: x.id, section))
         new_genes = section
         missing_genes = []
+        # Identifica quais pedaços de gene faltam para não perder nenhuma informação na recombinação como repetir uma mesma tarefa
         for gene in chromosome1.genes:
             if gene.id not in section_genes_ids:
                 missing_genes.append(gene.id)
+        # Faz a recombinação dos genes que faltam da seção inicial com o segundo cromossomo
         for id in missing_genes:
             chromosome2_gene = chromosome2.find_task_by_id(id)
             valid_gene = True
@@ -28,17 +30,16 @@ class Evolution:
                 chromosome1_gene = chromosome1.find_task_by_id(id)
                 new_genes.append(chromosome1_gene)
         new_genes = sorted(new_genes, key=lambda x: x.id)
+        # Verifica se o novo cromosso gerado possui conflitos de horário
+        # Caso tenha deve ser mitigado para gerar uma possível solução recombinando sem conflitos
         has_conflicts = self.check_conflicts(new_genes)
-        if has_conflicts:
-            print("Conflicts")
-        else:
-            print("No Conflicts")
         return Chromosome(new_genes)
             
     def mutation(self, chromosome):
         temp_chromosome = deepcopy(chromosome)
         chosen_gene = temp_chromosome.genes.pop(random.randrange(len(temp_chromosome.genes)))
         swap_gene = temp_chromosome.genes.pop(random.randrange(len(temp_chromosome.genes)))
+        # Troca dois genes de posição mudando o dia de semana e horário de duas tarefas distintas
         for gene in chromosome.genes:
             if gene.id == chosen_gene.id:
                 gene.week = swap_gene.week
@@ -48,8 +49,8 @@ class Evolution:
                 gene.schedule = chosen_gene.schedule
      
     # Seleção por torneio
-    def selection(self, population, tsize=3):
-        candidates = random.sample(population, tsize)
+    def selection(self, population, size=3):
+        candidates = random.sample(population, size)
         return max(candidates, key=lambda x: x.fitness)
 
     # Prioriza resultados que distribuem as tarefas em todos dias de semana e que respeitem a preferência de horário
@@ -62,8 +63,8 @@ class Evolution:
         for gene in genes:
             gene = gene.gene()
             week_day = gene[0]
-            preference = gene[len(gene) - 2:len(gene) - 1]
-            schedule = gene[1:len(gene) - 2]
+            preference = gene[len(gene) - 3:len(gene) - 2]
+            schedule = gene[1:len(gene) - 3]
             if int(preference) == 0 and int(schedule) in morning_hours:
                 fitness += 1
             elif int(preference) == 1 and int(schedule) in noun_hours:
